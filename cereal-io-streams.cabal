@@ -1,0 +1,55 @@
+name:                cereal-io-streams
+version:             0.0.0.0
+synopsis:            io-streams support for the cereal binary serialization library
+description:
+    io-streams support for the cereal binary serialization library
+    .
+license:             BSD3
+license-file:        LICENSE
+author:              Michael Xavier
+maintainer:          michael.xavier@soostone.com
+copyright:           Soostone Inc
+category:            Data, Parsing, IO-Streams
+build-type:          Simple
+cabal-version:       >=1.10
+
+library
+  exposed-modules:
+    System.IO.Streams.Cereal
+  build-depends:
+      base >= 4 && < 5
+    , bytestring
+    , cereal >= 0.4 && < 0.5
+    , io-streams >= 1.1 && < 1.3
+  hs-source-dirs: src
+  default-language:    Haskell2010
+
+test-suite doctest
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  hs-source-dirs: doctest
+  build-depends:
+      base
+    , cereal-io-streams
+    , doctest
+  default-language:    Haskell2010
+
+
+test-suite test
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  build-depends:
+      cereal-io-streams
+    , cereal
+    , cereal
+    , bytestring
+    , io-streams
+    , QuickCheck
+    , HUnit
+    , tasty
+    , tasty-quickcheck
+    , tasty-hunit
+    , derive
+    , base
+  hs-source-dirs: test
+  default-language:    Haskell2010
