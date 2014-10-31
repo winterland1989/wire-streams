@@ -14,19 +14,21 @@
 module System.IO.Streams.Cereal
     ( getFromStream
     , putToStream
+    , getEachStream
+    , putEachStream
     , GetException(..)
     ) where
 
 -------------------------------------------------------------------------------
-import           Control.Exception     (Exception, throwIO)
+import           Control.Exception      (Exception, throwIO)
 import           Control.Monad
-import           Data.ByteString       (ByteString)
-import qualified Data.ByteString.Char8 as S
+import           Data.ByteString        (ByteString)
+import qualified Data.ByteString.Char8  as S
 import           Data.Monoid
 import           Data.Serialize
 import           Data.Typeable
+import qualified System.IO.Streams      as Streams
 import           System.IO.Streams.Core
-import qualified System.IO.Streams     as Streams
 -------------------------------------------------------------------------------
 
 data GetException = GetException String
@@ -51,6 +53,31 @@ putToStream = Streams.fromLazyByteString . runPutLazy
 
 
 -------------------------------------------------------------------------------
+-- | Convert a stream of individual serialized 'ByteString's to a stream
+-- of Results. Throws a GetException on error.
+--
+-- Example:
+--
+-- >>> Streams.toList =<< getEachStream (get :: Get String) =<< Streams.fromList (map (runPut . put) ["foo", "bar"])
+-- ["foo","bar"]
+getEachStream :: Get r -> InputStream ByteString -> IO (InputStream r)
+getEachStream g = Streams.mapM (either (throwIO . GetException) return . runGet g)
+{-# INLINE getEachStream #-}
+
+
+-------------------------------------------------------------------------------
+-- | Convert a stream of serializable objects into a stream of
+-- individual 'ByteString's
+-- Example:
+--
+-- >>> Streams.toList =<< getEachStream (get :: Get String) =<< putEachStream put =<< Streams.fromList ["foo","bar"]
+-- ["foo","bar"]
+putEachStream :: Putter r -> InputStream r -> IO (InputStream ByteString)
+putEachStream p = Streams.map (runPut . p)
+{-# INLINE putEachStream #-}
+
+
+-------------------------------------------------------------------------------
 -- | Take a 'Get' and an 'InputStream' and deserialize a
 -- value. Consumes only as much input as necessary to deserialize the
 -- value. Unconsumed input is left on the 'InputStream'. If there is
@@ -68,6 +95,7 @@ putToStream = Streams.fromLazyByteString . runPutLazy
 getFromStream :: Get r -> InputStream ByteString -> IO r
 getFromStream = getFromStreamInternal runGetPartial feed
 {-# INLINE getFromStream #-}
+
 
 -------------------------------------------------------------------------------
 feed :: Result r -> ByteString -> Result r

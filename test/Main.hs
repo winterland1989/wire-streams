@@ -12,8 +12,8 @@ import           Data.DeriveTH
 import           Data.Monoid
 import           Data.Serialize
 import           GHC.Generics
-import           System.IO.Streams
-import qualified System.IO.Streams as S
+import           System.IO.Streams        hiding (map)
+import qualified System.IO.Streams        as Streams
 import           Test.QuickCheck.Monadic
 import           Test.Tasty
 import           Test.Tasty.HUnit         hiding (assert)
@@ -46,6 +46,14 @@ prop_roundtrip_Foo = monadicIO $ do
 
 
 -------------------------------------------------------------------------------
+prop_roundtrip_Foo' = monadicIO $ do
+    as   <- (pick arbitrary :: PropertyM IO [Foo])
+    res <- run $
+      Streams.toList =<< getEachStream get =<< putEachStream put =<< Streams.fromList as
+    assert $ as == res
+
+
+-------------------------------------------------------------------------------
 test_partial = do
   let s = mutatePut $ BS.drop 1
   assertGetException $ getFromStream (get :: Get Foo) =<< fromByteString s
@@ -59,7 +67,7 @@ test_excess_tail = do
   remainder @?= "extra"
 
 -------------------------------------------------------------------------------
-smappend = S.fold mappend mempty
+smappend = Streams.fold mappend mempty
 
 -------------------------------------------------------------------------------
 test_excess_head = do
