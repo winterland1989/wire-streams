@@ -16,6 +16,7 @@ module System.IO.Streams.Cereal
     , putToStream
     , getEachStream
     , putEachStream
+    , contramapPut
     , GetException(..)
     ) where
 
@@ -96,6 +97,12 @@ getFromStream :: Get r -> InputStream ByteString -> IO r
 getFromStream = getFromStreamInternal runGetPartial feed
 {-# INLINE getFromStream #-}
 
+
+-------------------------------------------------------------------------------
+-- | Take an output stream of serializable values and create an output
+-- stream of bytestrings, one for each value.
+contramapPut :: Putter r -> OutputStream ByteString -> IO (OutputStream r)
+contramapPut p = Streams.contramap (runPut . p)
 
 -------------------------------------------------------------------------------
 feed :: Result r -> ByteString -> Result r
