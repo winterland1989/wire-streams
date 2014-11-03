@@ -3,7 +3,10 @@
 ## Functions
 ```haskell
 putToStream :: Put -> IO (InputStream ByteString)
+putEachStream :: Putter r -> InputStream r -> IO (InputStream ByteString)
 getFromStream :: Get r -> InputStream ByteString -> IO r
+getEachStream :: Get r -> InputStream ByteString -> IO (InputStream r)
+contramapPut :: Putter r -> OutputStream ByteString -> IO (OutputStream r)
 ```
 
 ### Examples
