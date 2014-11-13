@@ -18,6 +18,11 @@ import           Test.QuickCheck.Monadic
 import           Test.Tasty
 import           Test.Tasty.HUnit         hiding (assert)
 import           Test.Tasty.QuickCheck
+
+import Control.Monad
+import qualified Data.ByteString.Lazy          as LBS
+import qualified Data.ByteString.Char8          as BS8
+import qualified Control.Monad.State as MS
 -------------------------------------------------------------------------------
 import           System.IO.Streams.Cereal
 -------------------------------------------------------------------------------
@@ -31,6 +36,9 @@ testSuite :: TestTree
 testSuite = testGroup "cereal-io-streams"
   [
     testProperty "serialization roundtrips Foo" prop_roundtrip_Foo
+
+  , testProperty "serialization roundtrips Foo unpredictable chunking" prop_roundtrip_Foo_chunking
+
   , testCase "partial input" test_partial
   , testCase "excess preceding input" test_excess_head
   , testCase "excess remaining input left in stream" test_excess_tail
@@ -46,10 +54,13 @@ prop_roundtrip_Foo = monadicIO $ do
 
 
 -------------------------------------------------------------------------------
-prop_roundtrip_Foo' = monadicIO $ do
+prop_roundtrip_Foo_chunking = monadicIO $ do
     as   <- (pick arbitrary :: PropertyM IO [Foo])
-    res <- run $
-      Streams.toList =<< getEachStream get =<< putEachStream put =<< Streams.fromList as
+    Positive csize <- pick arbitrary
+    res <- run $ do
+      lbs <- fmap (LBS.fromChunks . rechunk csize . mconcat) . Streams.toList =<< putEachStream put =<< Streams.fromList as
+      is <- fromLazyByteString lbs
+      Streams.toList =<< getEachStream get is
     assert $ as == res
 
 
@@ -77,6 +88,19 @@ test_excess_head = do
 
 -------------------------------------------------------------------------------
 mutatePut f = f $ runPut $ put $ Foo 42 "yup"
+
+
+-------------------------------------------------------------------------------
+rechunk :: Int -> BS.ByteString -> [BS.ByteString]
+rechunk n bs = fst $ MS.execState go ([], bs)
+  where
+    go :: MS.State ([BS.ByteString], BS.ByteString) ()
+    go = do
+      (chunks, rmning) <- MS.get
+      unless (BS.null rmning) $ do
+        let (chunk, rmning') = BS.splitAt n rmning
+        MS.put (chunks ++ [chunk], rmning')
+        go
 
 
 -------------------------------------------------------------------------------

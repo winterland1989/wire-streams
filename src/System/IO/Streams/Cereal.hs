@@ -21,6 +21,7 @@ module System.IO.Streams.Cereal
     ) where
 
 -------------------------------------------------------------------------------
+import           Control.Applicative
 import           Control.Exception      (Exception, throwIO)
 import           Control.Monad
 import           Data.ByteString        (ByteString)
@@ -62,7 +63,11 @@ putToStream = Streams.fromLazyByteString . runPutLazy
 -- >>> Streams.toList =<< getEachStream (get :: Get String) =<< Streams.fromList (map (runPut . put) ["foo", "bar"])
 -- ["foo","bar"]
 getEachStream :: Get r -> InputStream ByteString -> IO (InputStream r)
-getEachStream g = Streams.mapM (either (throwIO . GetException) return . runGet g)
+getEachStream g is = makeInputStream $ do
+  atEnd <- atEOF is
+  if atEnd
+    then return Nothing
+    else Just <$> getFromStream g is
 {-# INLINE getEachStream #-}
 
 
