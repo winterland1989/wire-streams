@@ -24,23 +24,12 @@ library
   hs-source-dirs: src
   default-language:    Haskell2010
 
-test-suite doctest
-  type: exitcode-stdio-1.0
-  main-is: Main.hs
-  hs-source-dirs: doctest
-  build-depends:
-      base
-    , cereal-io-streams
-    , doctest
-  default-language:    Haskell2010
-
 
 test-suite test
   type: exitcode-stdio-1.0
   main-is: Main.hs
   build-depends:
       cereal-io-streams
-    , cereal
     , cereal
     , bytestring
     , io-streams
@@ -54,3 +43,16 @@ test-suite test
     , mtl
   hs-source-dirs: test
   default-language:    Haskell2010
+
+benchmark bench
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  hs-source-dirs: bench
+  default-language:    Haskell2010
+  build-depends:
+      base
+    , cereal-io-streams
+    , criterion >= 1.0.2.0
+    , io-streams
+    , bytestring
+    , cereal
