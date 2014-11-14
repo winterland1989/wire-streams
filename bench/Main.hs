@@ -19,7 +19,8 @@ main :: IO ()
 main = defaultMain [
    bgroup "getEachStream" [
      bench "1000 items" $ whnfIO $ do
-       -- can't get "env" to work because it demands an NFData on inputstream/putputstream
+       -- can't get "env" to work because it demands an NFData on
+       -- inputstream/putputstream
        (is, os) <- setup
        Streams.connectTo os =<< getEachStream get is
    ]
@@ -42,4 +43,3 @@ setup = do
 data Foo = Foo Int ByteString deriving (Generic,Show,Eq)
 
 instance Serialize Foo
--- instance NFData Foo
