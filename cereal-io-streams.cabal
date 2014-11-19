@@ -56,3 +56,7 @@ benchmark bench
     , io-streams
     , bytestring
     , cereal
+
+source-repository head
+  type:     git
+  location: git://github.com/Soostone/cereal-io-streams.git
