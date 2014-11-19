@@ -7,6 +7,10 @@ module Main
 -------------------------------------------------------------------------------
 import           Criterion.Main
 import           Data.ByteString          (ByteString)
+import           Data.Conduit
+import qualified Data.Conduit.Cereal as Conduit
+import qualified Data.Conduit.List as Conduit
+import qualified Data.Conduit.Binary as Conduit
 import           Data.Monoid
 import           Data.Serialize
 import           GHC.Generics
@@ -16,28 +20,22 @@ import           System.IO.Streams.Cereal
 -------------------------------------------------------------------------------
 
 main :: IO ()
-main = defaultMain [
-   bgroup "getEachStream" [
-     bench "1000 items" $ whnfIO $ do
-       -- can't get "env" to work because it demands an NFData on
-       -- inputstream/putputstream
-       (is, os) <- setup
-       Streams.connectTo os =<< getEachStream get is
-   ]
- ]
-
-
--------------------------------------------------------------------------------
-setup :: IO (Streams.InputStream ByteString, Streams.OutputStream Foo)
-setup = do
-  is <- Streams.fromLazyByteString lstring
-  os <- Streams.nullOutput
-  return (is, os)
-  where
-    lstring = mconcat $ map (runPutLazy . put) foos
-    foos = replicate 1000 exFoo
-    exFoo = Foo 42 "oh look, a Foo!"
-
+main = do
+  let lstring = mconcat $ map (runPutLazy . put) foos
+      foos = replicate 1000 exFoo
+      exFoo = Foo 42 "oh look, a Foo!"
+  defaultMain
+    [ bgroup "getEachStream" [
+        bench "1000 items cereal-io-streams" $ whnfIO $ do
+          os <- Streams.nullOutput
+          Streams.connectTo os =<< getEachStream get' =<< Streams.fromLazyByteString lstring
+       , bench "1000 items conduit" $ whnfIO $ do
+          Conduit.sourceLbs lstring $= Conduit.conduitGet get' $$ Conduit.sinkNull
+       ]
+    ]
+ where
+   get' :: Get Foo
+   get' = get
 
 -------------------------------------------------------------------------------
 data Foo = Foo Int ByteString deriving (Generic,Show,Eq)

@@ -56,6 +56,9 @@ benchmark bench
     , io-streams
     , bytestring
     , cereal
+    , cereal-conduit
+    , conduit
+    , conduit-extra
 
 source-repository head
   type:     git
