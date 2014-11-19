@@ -1,4 +1,5 @@
 # cereal-io-streams - io-streams support for the cereal binary serialization library
+[![Build Status](https://travis-ci.org/Soostone/cereal-io-streams.svg)](https://travis-ci.org/Soostone/cereal-io-streams)
 
 ## Functions
 ```haskell
