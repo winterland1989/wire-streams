@@ -59,6 +59,8 @@ benchmark bench
     , cereal-conduit
     , conduit
     , conduit-extra
+  ghc-options: -rtsopts
+  ghc-prof-options: -rtsopts -caf-all -auto-all
 
 source-repository head
   type:     git

@@ -25,17 +25,25 @@ main = do
       foos = replicate 1000 exFoo
       exFoo = Foo 42 "oh look, a Foo!"
   defaultMain
-    [ bgroup "getEachStream" [
-        bench "1000 items cereal-io-streams" $ whnfIO $ do
-          os <- Streams.nullOutput
-          Streams.connectTo os =<< getEachStream get' =<< Streams.fromLazyByteString lstring
-       , bench "1000 items conduit" $ whnfIO $ do
-          Conduit.sourceLbs lstring $= Conduit.conduitGet get' $$ Conduit.sinkNull
-       ]
+    [ bgroup "getEachStream cereal-io-streams" [
+         bench "1000 items" $ whnfIO $ benchCIS lstring ]
+    , bgroup "getEachStream cereal-conduit" [
+         bench "1000 items" $ whnfIO $ benchCC lstring ]
     ]
  where
-   get' :: Get Foo
-   get' = get
+
+
+benchCIS lstring = do
+  os <- Streams.nullOutput
+  Streams.connectTo os =<< getEachStream get' =<< Streams.fromLazyByteString lstring
+
+benchCC lstring = do
+  Conduit.sourceLbs lstring $= Conduit.conduitGet get' $$ Conduit.sinkNull
+
+
+get' :: Get Foo
+get' = get
+
 
 -------------------------------------------------------------------------------
 data Foo = Foo Int ByteString deriving (Generic,Show,Eq)
