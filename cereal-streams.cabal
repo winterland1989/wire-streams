@@ -1,35 +1,32 @@
-name:                cereal-io-streams
-version:             0.0.0.0
+name:                cereal-streams
+version:             0.0.0.1
 synopsis:            io-streams support for the cereal binary serialization library
 description:
     io-streams support for the cereal binary serialization library
     .
 license:             BSD3
 license-file:        LICENSE
-author:              Michael Xavier
-maintainer:          michael.xavier@soostone.com
-copyright:           Soostone Inc
+author:              Michael Xavier, Winterland
+maintainer:          michael.xavier@soostone.com, winterland1989@gmail.com
+copyright:           Soostone Inc, Winterland
 category:            Data, Parsing, IO-Streams
 build-type:          Simple
 cabal-version:       >=1.10
 
 library
-  exposed-modules:
-    System.IO.Streams.Cereal
-  build-depends:
-      base >= 4 && < 5
-    , bytestring
-    , cereal >= 0.4 && < 0.5
-    , io-streams >= 1.1 && < 1.3
-  hs-source-dirs: src
-  default-language:    Haskell2010
-
+  exposed-modules:      System.IO.Streams.Cereal
+  build-depends:        base >= 4 && < 5
+                    ,   bytestring
+                    ,   cereal >= 0.5 && < 0.6
+                    ,   io-streams >= 1.2
+  hs-source-dirs:       src
+  default-language:     Haskell2010
 
 test-suite test
   type: exitcode-stdio-1.0
   main-is: Main.hs
   build-depends:
-      cereal-io-streams
+      cereal-streams
     , cereal
     , bytestring
     , io-streams
@@ -51,7 +48,7 @@ benchmark bench
   default-language:    Haskell2010
   build-depends:
       base
-    , cereal-io-streams
+    , cereal-streams
     , criterion >= 1.0.2.0
     , io-streams
     , bytestring
@@ -59,9 +56,11 @@ benchmark bench
     , cereal-conduit
     , conduit
     , conduit-extra
+    , transformers
+    , deepseq
   ghc-options: -rtsopts
   ghc-prof-options: -rtsopts -caf-all -auto-all
 
 source-repository head
   type:     git
-  location: git://github.com/Soostone/cereal-io-streams.git
+  location: git://github.com/winterland1989/cereal-streams.git

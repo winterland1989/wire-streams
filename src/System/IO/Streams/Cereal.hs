@@ -3,24 +3,34 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Sytem.IO.Streams.Cereal
--- Copyright   :  Soostone Inc
+-- Copyright   :  Soostone Inc, Winterland
 -- License     :  BSD3
 --
--- Maintainer  :  Michael Xavier
+-- Maintainer  :  Michael Xavier, Winterland
 -- Stability   :  experimental
 --
 -- io-streams interface to the cereal binary serialization library.
 ----------------------------------------------------------------------------
+
 module System.IO.Streams.Cereal
-    ( getFromStream
+    (
+    -- * single element serialize/deSerialize
+      getFromStream
     , putToStream
-    , getEachStream
-    , putEachStream
-    , contramapPut
+    -- * 'InputStream' serialize/deSerialize
+    , getInputStream
+    , deSerializeInputStream
+    , putInputStream
+    , serializeInputStream
+    -- * 'OutputStream' serialize
+    , putOutputStream
+    , serializeOutputStream
+    -- * exception type
     , GetException(..)
     ) where
 
 -------------------------------------------------------------------------------
+
 import           Control.Applicative
 import           Control.Exception      (Exception, throwIO)
 import           Control.Monad
@@ -31,63 +41,32 @@ import           Data.Serialize
 import           Data.Typeable
 import qualified System.IO.Streams      as Streams
 import           System.IO.Streams.Core
+
 -------------------------------------------------------------------------------
 
 data GetException = GetException String
   deriving (Typeable)
 
 instance Show GetException where
-    show (GetException s) = "Get exception: " ++ s
+    show (GetException s) = "Get parse error: " ++ s
 
 instance Exception GetException
 
-
-
 -------------------------------------------------------------------------------
--- | Convert a 'Put' into an 'InputStream'
+
+-- | write a 'Put' to an 'OutputStream'
 --
--- Example:
---
--- >>> putToStream (put False)
-putToStream :: Put -> IO (InputStream ByteString)
-putToStream = Streams.fromLazyByteString . runPutLazy
+putToStream :: Put -> OutputStream ByteString -> IO ()
+putToStream p = Streams.write (Just (runPut p))
 {-# INLINE putToStream #-}
 
-
 -------------------------------------------------------------------------------
--- | Convert a stream of individual serialized 'ByteString's to a stream
--- of Results. Throws a GetException on error.
---
--- Example:
---
--- >>> Streams.toList =<< getEachStream (get :: Get String) =<< Streams.fromList (map (runPut . put) ["foo", "bar"])
--- ["foo","bar"]
-getEachStream :: Get r -> InputStream ByteString -> IO (InputStream r)
-getEachStream g is = makeInputStream $ do
-  atEnd <- atEOF is
-  if atEnd
-    then return Nothing
-    else Just <$> getFromStream g is
-{-# INLINE getEachStream #-}
 
-
--------------------------------------------------------------------------------
--- | Convert a stream of serializable objects into a stream of
--- individual 'ByteString's
--- Example:
---
--- >>> Streams.toList =<< getEachStream (get :: Get String) =<< putEachStream put =<< Streams.fromList ["foo","bar"]
--- ["foo","bar"]
-putEachStream :: Putter r -> InputStream r -> IO (InputStream ByteString)
-putEachStream p = Streams.map (runPut . p)
-{-# INLINE putEachStream #-}
-
-
--------------------------------------------------------------------------------
 -- | Take a 'Get' and an 'InputStream' and deserialize a
 -- value. Consumes only as much input as necessary to deserialize the
--- value. Unconsumed input is left on the 'InputStream'. If there is
--- an error while deserializing, a 'GetException' is thrown.
+-- value. Unconsumed input will be unread. If there is
+-- an error while deserializing, a 'GetException' is thrown, and
+-- unconsumed part will be unread.
 --
 -- Examples:
 --
@@ -98,54 +77,63 @@ putEachStream p = Streams.map (runPut . p)
 -- From:	demandInput
 -- <BLANKLINE>
 -- <BLANKLINE>
-getFromStream :: Get r -> InputStream ByteString -> IO r
-getFromStream = getFromStreamInternal runGetPartial feed
+getFromStream :: Get r -> InputStream ByteString -> IO (Maybe r)
+getFromStream get is =
+    Streams.read is >>= maybe (return Nothing) (go . runGetPartial get)
+  where
+    go (Fail msg s) = do
+        Streams.unRead s is
+        throwIO (GetException msg)
+    go (Done r s) = do
+         unless (S.null s) (Streams.unRead s is)
+         return (Just r)
+    go c@(Partial cont) =
+        Streams.read is >>= maybe (go (cont S.empty))   -- use 'empty' to notify cereal ending.
+        (\ s -> if S.null s then go c else go (cont s))
 {-# INLINE getFromStream #-}
 
+-------------------------------------------------------------------------------
+
+-- | Convert a stream of individual serialized 'ByteString's to a stream
+-- of Results. Throws a GetException on error.
+--
+-- Example:
+--
+-- >>> Streams.toList =<< getInputStream (get :: Get String) =<< Streams.fromList (map (runPut . put) ["foo", "bar"])
+-- ["foo","bar"]
+getInputStream :: Get r -> InputStream ByteString -> IO (InputStream r)
+getInputStream g is = makeInputStream (getFromStream g is)
+{-# INLINE getInputStream #-}
+
+-- | typeclass version of 'getInputStream'
+deSerializeInputStream :: Serialize r => InputStream ByteString -> IO (InputStream r)
+deSerializeInputStream = getInputStream get
 
 -------------------------------------------------------------------------------
--- | Take an output stream of serializable values and create an output
--- stream of bytestrings, one for each value.
-contramapPut :: Putter r -> OutputStream ByteString -> IO (OutputStream r)
-contramapPut p = Streams.contramap (runPut . p)
+
+-- | Convert a stream of serializable objects into a stream of
+-- individual 'ByteString's with a 'Putter', this function are used in
+-- round-trip test.
+-- Example:
+--
+-- >>> Streams.toList =<< getInputStream (get :: Get String) =<< serializeInputStream =<< Streams.fromList ["foo","bar"]
+-- ["foo","bar"]
+putInputStream :: Putter r -> InputStream r -> IO (InputStream ByteString)
+putInputStream p = Streams.map (runPut . p)
+{-# INLINE putInputStream #-}
+
+-- | typeclass version of 'putInputStream'
+serializeInputStream :: Serialize r => InputStream r -> IO (InputStream ByteString)
+serializeInputStream = putInputStream put
 
 -------------------------------------------------------------------------------
-feed :: Result r -> ByteString -> Result r
-feed (Partial f) bs = f bs
-feed (Done r x) bs = Done r $ x <> bs
-feed (Fail s x) bs = Fail s $ x <> bs
 
--------------------------------------------------------------------------------
-getFromStreamInternal
-    :: (Get r -> ByteString -> Result r)
-    -> (Result r -> ByteString -> Result r)
-    -> Get r
-    -> InputStream ByteString
-    -> IO r
-getFromStreamInternal getFunc feedFunc g is =
-    Streams.read is >>=
-    maybe (finish $ getFunc g "")
-          (\s -> if S.null s
-                   then getFromStreamInternal getFunc feedFunc g is
-                   else go $! getFunc g s)
-  where
-    leftover x = unless (S.null x) $ Streams.unRead x is
+-- | create an 'OutputStream' of serializable values from an 'OutputStream'
+-- of bytestrings with a 'Putter'.
+putOutputStream :: Putter r -> OutputStream ByteString -> IO (OutputStream r)
+putOutputStream p = Streams.contramap (runPut . p)
+{-# INLINE putOutputStream #-}
 
-    finish k = let k' = feedFunc (feedFunc k "") ""
-               in case k' of
-                    Fail _ x -> leftover x >> err k'
-                    Partial _  -> err k' -- should be impossible
-                    Done r x   -> leftover x >> return r
-
-    err r = let (Left s) = eitherResult r in throwIO $ GetException s
-    eitherResult (Done _ r)     = Right r
-    eitherResult (Fail msg _)   = Left msg
-    eitherResult _              = Left "Result: incomplete input"
-
-    go r@(Fail _ x) = leftover x >> err r
-    go (Done r x)     = leftover x >> return r
-    go r              = Streams.read is >>=
-                        maybe (finish r)
-                              (\s -> if S.null s
-                                       then go r
-                                       else go $! feedFunc r s)
+-- | typeclass version of 'putOutputStream'
+serializeOutputStream :: Serialize r => OutputStream ByteString -> IO (OutputStream r)
+serializeOutputStream = Streams.contramap (runPut . put)
