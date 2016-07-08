@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE OverloadedStrings  #-}
+
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Sytem.IO.Streams.Cereal
@@ -9,24 +10,24 @@
 -- Maintainer  :  Michael Xavier, Winterland
 -- Stability   :  experimental
 --
--- io-streams interface to the cereal binary serialization library.
+-- Use cereal to encode/decode io-streams.
 ----------------------------------------------------------------------------
 
 module System.IO.Streams.Cereal
     (
-    -- * single element serialize/deSerialize
+    -- * single element encode/decode
       getFromStream
     , putToStream
-    -- * 'InputStream' serialize/deSerialize
+    -- * 'InputStream' encode/decode
     , getInputStream
-    , deSerializeInputStream
+    , decodeInputStream
     , putInputStream
-    , serializeInputStream
-    -- * 'OutputStream' serialize
+    , encodeInputStream
+    -- * 'OutputStream' encode
     , putOutputStream
-    , serializeOutputStream
+    , encodeOutputStream
     -- * exception type
-    , GetException(..)
+    , DecodeException(..)
     ) where
 
 -------------------------------------------------------------------------------
@@ -44,13 +45,13 @@ import           System.IO.Streams.Core
 
 -------------------------------------------------------------------------------
 
-data GetException = GetException String
+data DecodeException = DecodeException String
   deriving (Typeable)
 
-instance Show GetException where
-    show (GetException s) = "Get parse error: " ++ s
+instance Show DecodeException where
+    show (DecodeException s) = "System.IO.Streams.Cereal: cereal decode exception: " ++ s
 
-instance Exception GetException
+instance Exception DecodeException
 
 -------------------------------------------------------------------------------
 
@@ -62,28 +63,28 @@ putToStream p = Streams.write (Just (runPut p))
 
 -------------------------------------------------------------------------------
 
--- | Take a 'Get' and an 'InputStream' and deserialize a
--- value. Consumes only as much input as necessary to deserialize the
+-- | Take a 'Get' and an 'InputStream' and decode a
+-- value. Consumes only as much input as necessary to decode the
 -- value. Unconsumed input will be unread. If there is
--- an error while deserializing, a 'GetException' is thrown, and
--- unconsumed part will be unread.
+-- an error while deserializing, a 'DecodeException' is thrown, and
+-- unconsumed part will be unread. To simplify upstream generation,
+-- all empty 'ByteString' will be filtered out and not passed to cereal,
+-- only EOFs/Nothing will close a cereal decoder.
 --
 -- Examples:
 --
--- >>> getFromStream (get :: Get String) =<< putToStream (put "serialize me")
--- "serialize me"
--- >>> getFromStream (get :: Get String) =<< Streams.fromByteString (Data.ByteString.drop 1 $ runPut $ put ("serialize me" :: String))
--- *** Exception: Get exception: too few bytes
+-- >>> import qualified System.IO.Streams as Streams
+-- >>> getFromStream (get :: Get String) =<< Streams.fromByteString (Data.ByteString.drop 1 $ runPut $ put "encode me")
+-- *** Exception: System.IO.Streams.Cereal: cereal decode exception: too few bytes
 -- From:	demandInput
 -- <BLANKLINE>
--- <BLANKLINE>
 getFromStream :: Get r -> InputStream ByteString -> IO (Maybe r)
-getFromStream get is =
-    Streams.read is >>= maybe (return Nothing) (go . runGetPartial get)
+getFromStream g is =
+    Streams.read is >>= maybe (return Nothing) (go . runGetPartial g)
   where
     go (Fail msg s) = do
         Streams.unRead s is
-        throwIO (GetException msg)
+        throwIO (DecodeException msg)
     go (Done r s) = do
          unless (S.null s) (Streams.unRead s is)
          return (Just r)
@@ -94,8 +95,8 @@ getFromStream get is =
 
 -------------------------------------------------------------------------------
 
--- | Convert a stream of individual serialized 'ByteString's to a stream
--- of Results. Throws a GetException on error.
+-- | Convert a stream of individual encoded 'ByteString's to a stream
+-- of Results. Throws a DecodeException on error.
 --
 -- Example:
 --
@@ -106,25 +107,25 @@ getInputStream g is = makeInputStream (getFromStream g is)
 {-# INLINE getInputStream #-}
 
 -- | typeclass version of 'getInputStream'
-deSerializeInputStream :: Serialize r => InputStream ByteString -> IO (InputStream r)
-deSerializeInputStream = getInputStream get
+decodeInputStream :: Serialize r => InputStream ByteString -> IO (InputStream r)
+decodeInputStream = getInputStream get
 
 -------------------------------------------------------------------------------
 
 -- | Convert a stream of serializable objects into a stream of
--- individual 'ByteString's with a 'Putter', this function are used in
--- round-trip test.
+-- individual 'ByteString's with a 'Putter', while most of the time
+-- these function are not needed, they can be used in round-trip test.
 -- Example:
 --
--- >>> Streams.toList =<< getInputStream (get :: Get String) =<< serializeInputStream =<< Streams.fromList ["foo","bar"]
+-- >>> Streams.toList =<< getInputStream (get :: Get String) =<< encodeInputStream =<< Streams.fromList ["foo","bar"]
 -- ["foo","bar"]
 putInputStream :: Putter r -> InputStream r -> IO (InputStream ByteString)
 putInputStream p = Streams.map (runPut . p)
 {-# INLINE putInputStream #-}
 
 -- | typeclass version of 'putInputStream'
-serializeInputStream :: Serialize r => InputStream r -> IO (InputStream ByteString)
-serializeInputStream = putInputStream put
+encodeInputStream :: Serialize r => InputStream r -> IO (InputStream ByteString)
+encodeInputStream = putInputStream put
 
 -------------------------------------------------------------------------------
 
@@ -135,5 +136,5 @@ putOutputStream p = Streams.contramap (runPut . p)
 {-# INLINE putOutputStream #-}
 
 -- | typeclass version of 'putOutputStream'
-serializeOutputStream :: Serialize r => OutputStream ByteString -> IO (OutputStream r)
-serializeOutputStream = Streams.contramap (runPut . put)
+encodeOutputStream :: Serialize r => OutputStream ByteString -> IO (OutputStream r)
+encodeOutputStream = Streams.contramap (runPut . put)
