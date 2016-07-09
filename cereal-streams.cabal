@@ -10,12 +10,13 @@ maintainer:         michael.xavier@soostone.com, winterland1989@gmail.com
 copyright:          Soostone Inc, Winterland
 category:           Data, Parsing, IO-Streams
 build-type:         Simple
+extra-source-files: README.md
 cabal-version:      >=1.10
 
 library
   exposed-modules:      System.IO.Streams.Cereal
   build-depends:        base >= 4 && < 5
-                    ,   bytestring
+                    ,   bytestring >= 0.10.2.0
                     ,   cereal >= 0.5 && < 0.6
                     ,   io-streams >= 1.2
   hs-source-dirs:       src
@@ -55,7 +56,7 @@ benchmark bench
                     ,   conduit
                     ,   conduit-extra
                     ,   transformers
-                    ,   deepseq
+
   ghc-options:      -rtsopts -O
   ghc-prof-options: -rtsopts -caf-all -auto-all
 

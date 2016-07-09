@@ -1,7 +1,8 @@
 cereal-streams 
 ==============
 
-[![Build Status](https://travis-ci.org/winterland1989/cereal-io-streams.svg)](https://travis-ci.org/winterland1989/cereal-io-streams)
+[![Hackage](https://img.shields.io/hackage/v/cereal-streams.svg?style=flat)](http://hackage.haskell.org/package/cereal-streams)
+[![Build Status](https://travis-ci.org/winterland1989/cereal-streams.svg)](https://travis-ci.org/winterland1989/cereal-streams)
 
 Use [cereal](http://hackage.haskell.org/package/cereal) to encode/decode [io-streams](http://hackage.haskell.org/package/io-streams), io-streams provided strict bytestring chunk streams, which makes cereal the perfect chocie to do encoding/decoding works. It's an alternative to encode/decode with binary/lazy bytestring.
 

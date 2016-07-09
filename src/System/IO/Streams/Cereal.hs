@@ -96,7 +96,7 @@ getFromStream g is =
 -------------------------------------------------------------------------------
 
 -- | Convert a stream of individual encoded 'ByteString's to a stream
--- of Results. Throws a DecodeException on error.
+-- of Results. Throws a 'DecodeException' on error.
 --
 -- Example:
 --
