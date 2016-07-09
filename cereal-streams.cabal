@@ -1,5 +1,5 @@
 name:               cereal-streams
-version:            0.0.0.1
+version:            0.0.1.0
 synopsis:           Use cereal to encode/decode io-streams.
 description:        Use cereal to encode/decode io-streams.
 
