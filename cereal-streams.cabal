@@ -57,8 +57,7 @@ benchmark bench
                     ,   conduit-extra
                     ,   transformers
 
-  ghc-options:      -rtsopts
-  ghc-prof-options: -rtsopts -caf-all -auto-all
+  ghc-options:      -rtsopts -Wall
 
 source-repository head
   type:     git

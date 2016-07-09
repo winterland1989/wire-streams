@@ -5,19 +5,17 @@ module Main where
 
 -------------------------------------------------------------------------------
 
+import           Control.Exception        (evaluate)
+import           Control.Monad            (replicateM_)
+import           Control.Monad.IO.Class
 import           Criterion.Main
 import           Data.ByteString          (ByteString)
-import           Data.ByteString.Lazy     (toStrict, toChunks)
 import           Data.Conduit
-import qualified Data.Conduit.Cereal as Conduit
-import qualified Data.Conduit.List as Conduit
-import qualified Data.Conduit.Binary as Conduit
+import qualified Data.Conduit.Binary      as Conduit
+import qualified Data.Conduit.Cereal      as Conduit
 import           Data.Monoid
 import           Data.Serialize
 import           GHC.Generics
-import           Control.Monad.IO.Class
-import           Control.Monad   (replicateM_, replicateM)
-import           Control.Exception (evaluate)
 
 -------------------------------------------------------------------------------
 
