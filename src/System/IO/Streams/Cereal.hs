@@ -7,16 +7,16 @@
 -- Copyright   :  Soostone Inc, Winterland
 -- License     :  BSD3
 --
--- Maintainer  :  Michael Xavier, Winterland
+-- Maintainer  :  Winterland
 -- Stability   :  experimental
 --
 -- Use cereal to encode/decode io-streams.
 ----------------------------------------------------------------------------
 
-module System.IO.Streams.Cereal
-    (
+module System.IO.Streams.Cereal (
     -- * single element encode/decode
       getFromStream
+    , decodeFromStream
     , putToStream
     -- * 'InputStream' encode/decode
     , getInputStream
@@ -32,12 +32,10 @@ module System.IO.Streams.Cereal
 
 -------------------------------------------------------------------------------
 
-import           Control.Applicative
 import           Control.Exception      (Exception, throwIO)
-import           Control.Monad
+import           Control.Monad          (unless)
 import           Data.ByteString        (ByteString)
 import qualified Data.ByteString.Char8  as S
-import           Data.Monoid
 import           Data.Serialize
 import           Data.Typeable
 import qualified System.IO.Streams      as Streams
@@ -57,8 +55,9 @@ instance Exception DecodeException
 
 -- | write a 'Put' to an 'OutputStream'
 --
-putToStream :: Put -> OutputStream ByteString -> IO ()
-putToStream p = Streams.write (Just (runPut p))
+putToStream :: Serialize r => Maybe r -> OutputStream ByteString -> IO ()
+putToStream Nothing  = Streams.write Nothing
+putToStream (Just a) = (Streams.write . Just . runPut . put) a
 {-# INLINE putToStream #-}
 
 -------------------------------------------------------------------------------
@@ -92,6 +91,9 @@ getFromStream g is =
         Streams.read is >>= maybe (go (cont S.empty))   -- use 'empty' to notify cereal ending.
         (\ s -> if S.null s then go c else go (cont s))
 {-# INLINE getFromStream #-}
+
+decodeFromStream :: Serialize r => InputStream ByteString -> IO (Maybe r)
+decodeFromStream = getFromStream get
 
 -------------------------------------------------------------------------------
 

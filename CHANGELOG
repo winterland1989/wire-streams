@@ -1,3 +1,7 @@
-# v0.0.0.1
+# v0.0.2.0
+
+Add binary support, unify API, add benchmark.
+
+# v0.0.1.0
 
 Clean up code, rewrite main parsing function, fix broken benchmark, and add more functions.

@@ -1,12 +1,22 @@
-cereal-streams 
+wire-streams 
 ==============
 
-[![Hackage](https://img.shields.io/hackage/v/cereal-streams.svg?style=flat)](http://hackage.haskell.org/package/cereal-streams)
-[![Build Status](https://travis-ci.org/winterland1989/cereal-streams.svg)](https://travis-ci.org/winterland1989/cereal-streams)
+[![Hackage](https://img.shields.io/hackage/v/wire-streams.svg?style=flat)](http://hackage.haskell.org/package/wire-streams)
+[![Build Status](https://travis-ci.org/winterland1989/wire-streams.svg)](https://travis-ci.org/winterland1989/wire-streams)
 
-Use [cereal](http://hackage.haskell.org/package/cereal) to encode/decode [io-streams](http://hackage.haskell.org/package/io-streams), io-streams provided strict bytestring chunk streams, which makes cereal the perfect chocie to do encoding/decoding works. It's an alternative to encode/decode with binary/lazy bytestring.
+One stop solution to serialize/deserialize [io-streams](http://hackage.haskell.org/package/io-streams):
 
-This package is rewritten from [cereal-io-streams](https://github.com/Soostone/cereal-io-streams), here's benchmark result against [cereal-conduit](http://hackage.haskell.org/package/cereal-conduit):
++ `System.IO.Streams.Cereal` use [cereal](http://hackage.haskell.org/package/cereal) to serialize/deserialize, it provides sanner default to `Double`(IEEE-754), and `ShortByteString` support.
+
++  `System.IO.Streams.Binary` use [binary](http://hackage.haskell.org/package/binary) to serialize/deserialize, it provide some useful helpers currently not available in cereal(`getLazyByteStringNul`).
+
+This package is rewritten from [cereal-io-streams](https://github.com/Soostone/cereal-io-streams) and [binary-streams](https://github.com/jonpetterbergman/binary-streams) with following changes:
+
++ Completely rewrite cereal/io-streams adapter.
++ Clean and unify APIs. 
++ Add more test and benchmark.
+
+Both cereal and binary are top notch serialize/deserialize libaries, you wouldn't go wrong with either choice. This package mainly serve my purpose to develop native mysql adapter, but also provide a benchmark/comparsion across cereal and binary. here's benchmark result against [cereal-conduit](http://hackage.haskell.org/package/cereal-conduit):
 
 ```
 benchmarking decode one element from cereal-streams/1000 items
