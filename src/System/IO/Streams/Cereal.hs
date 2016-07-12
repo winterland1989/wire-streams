@@ -21,8 +21,6 @@ module System.IO.Streams.Cereal (
     -- * 'InputStream' encode/decode
     , getInputStream
     , decodeInputStream
-    , putInputStream
-    , encodeInputStream
     -- * 'OutputStream' encode
     , putOutputStream
     , encodeOutputStream
@@ -43,6 +41,7 @@ import           System.IO.Streams.Core
 
 -------------------------------------------------------------------------------
 
+-- | An Exception raised when cereal decoding fails.
 data DecodeException = DecodeException String
   deriving (Typeable)
 
@@ -53,11 +52,11 @@ instance Exception DecodeException
 
 -------------------------------------------------------------------------------
 
--- | write a 'Put' to an 'OutputStream'
+-- | write a instance of 'Serialize' to an 'OutputStream'
 --
-putToStream :: Serialize r => Maybe r -> OutputStream ByteString -> IO ()
+putToStream :: Serialize a => Maybe a -> OutputStream ByteString -> IO ()
 putToStream Nothing  = Streams.write Nothing
-putToStream (Just a) = (Streams.write . Just . runPut . put) a
+putToStream (Just a) = (Streams.writeLazyByteString . runPutLazy . put) a
 {-# INLINE putToStream #-}
 
 -------------------------------------------------------------------------------
@@ -77,12 +76,13 @@ putToStream (Just a) = (Streams.write . Just . runPut . put) a
 -- *** Exception: System.IO.Streams.Cereal: cereal decode exception: too few bytes
 -- From:	demandInput
 -- <BLANKLINE>
-getFromStream :: Get r -> InputStream ByteString -> IO (Maybe r)
+--
+getFromStream :: Get a -> InputStream ByteString -> IO (Maybe a)
 getFromStream g is =
     Streams.read is >>= maybe (return Nothing) (go . runGetPartial g)
   where
     go (Fail msg s) = do
-        Streams.unRead s is
+        unless (S.null s) (Streams.unRead s is)
         throwIO (DecodeException msg)
     go (Done r s) = do
          unless (S.null s) (Streams.unRead s is)
@@ -92,51 +92,35 @@ getFromStream g is =
         (\ s -> if S.null s then go c else go (cont s))
 {-# INLINE getFromStream #-}
 
-decodeFromStream :: Serialize r => InputStream ByteString -> IO (Maybe r)
+-- | typeclass version of 'getFromStream'
+decodeFromStream :: Serialize a => InputStream ByteString -> IO (Maybe a)
 decodeFromStream = getFromStream get
+{-# INLINE decodeFromStream #-}
 
 -------------------------------------------------------------------------------
 
 -- | Convert a stream of individual encoded 'ByteString's to a stream
 -- of Results. Throws a 'DecodeException' on error.
---
--- Example:
---
--- >>> Streams.toList =<< getInputStream (get :: Get String) =<< Streams.fromList (map (runPut . put) ["foo", "bar"])
--- ["foo","bar"]
-getInputStream :: Get r -> InputStream ByteString -> IO (InputStream r)
+getInputStream :: Get a -> InputStream ByteString -> IO (InputStream a)
 getInputStream g is = makeInputStream (getFromStream g is)
 {-# INLINE getInputStream #-}
 
 -- | typeclass version of 'getInputStream'
-decodeInputStream :: Serialize r => InputStream ByteString -> IO (InputStream r)
+decodeInputStream :: Serialize a => InputStream ByteString -> IO (InputStream a)
 decodeInputStream = getInputStream get
-
--------------------------------------------------------------------------------
-
--- | Convert a stream of serializable objects into a stream of
--- individual 'ByteString's with a 'Putter', while most of the time
--- these function are not needed, they can be used in round-trip test.
--- Example:
---
--- >>> Streams.toList =<< getInputStream (get :: Get String) =<< encodeInputStream =<< Streams.fromList ["foo","bar"]
--- ["foo","bar"]
-putInputStream :: Putter r -> InputStream r -> IO (InputStream ByteString)
-putInputStream p = Streams.map (runPut . p)
-{-# INLINE putInputStream #-}
-
--- | typeclass version of 'putInputStream'
-encodeInputStream :: Serialize r => InputStream r -> IO (InputStream ByteString)
-encodeInputStream = putInputStream put
+{-# INLINE decodeInputStream #-}
 
 -------------------------------------------------------------------------------
 
 -- | create an 'OutputStream' of serializable values from an 'OutputStream'
 -- of bytestrings with a 'Putter'.
-putOutputStream :: Putter r -> OutputStream ByteString -> IO (OutputStream r)
-putOutputStream p = Streams.contramap (runPut . p)
+putOutputStream :: Putter a -> OutputStream ByteString -> IO (OutputStream a)
+putOutputStream p os = Streams.makeOutputStream $ \ ma ->
+    case ma of Nothing -> Streams.write Nothing os
+               Just a  -> Streams.writeLazyByteString (runPutLazy (p a)) os
 {-# INLINE putOutputStream #-}
 
 -- | typeclass version of 'putOutputStream'
-encodeOutputStream :: Serialize r => OutputStream ByteString -> IO (OutputStream r)
-encodeOutputStream = Streams.contramap (runPut . put)
+encodeOutputStream :: Serialize a => OutputStream ByteString -> IO (OutputStream a)
+encodeOutputStream = putOutputStream put
+{-# INLINE encodeOutputStream #-}

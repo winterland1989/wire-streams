@@ -1,6 +1,6 @@
 # v0.0.2.0
 
-Add binary support, unify API, add benchmark.
+Add binary support, unify API, optimize cereal's putToStream/putOutputStream, add benchmark.
 
 # v0.0.1.0
 

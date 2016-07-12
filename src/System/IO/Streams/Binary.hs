@@ -10,7 +10,7 @@
 -- Maintainer  :  Winterland
 -- Stability   :  experimental
 --
--- Use cereal to encode/decode io-streams.
+-- Use binary to encode/decode io-streams.
 --------------------------------------------------------------------------------
 
 module System.IO.Streams.Binary (
@@ -30,7 +30,7 @@ module System.IO.Streams.Binary (
 
 --------------------------------------------------------------------------------
 
-import           Control.Exception            (Exception, throw)
+import           Control.Exception            (Exception, throwIO)
 import           Control.Monad                (unless)
 import           Data.Binary                  (Binary, get, put)
 import           Data.Binary.Get              (ByteOffset, Decoder (..), Get,
@@ -46,7 +46,9 @@ import           System.IO.Streams.ByteString (writeLazyByteString)
 
 --------------------------------------------------------------------------------
 
--- | An Exception raised when decoding fails.
+-- | An Exception raised when binary decoding fails.
+--
+-- it contains offset information where cereal don't.
 data DecodeException = DecodeException ByteOffset String
   deriving (Typeable)
 
@@ -58,7 +60,7 @@ instance Exception DecodeException
 
 --------------------------------------------------------------------------------
 
--- | Write an instance of 'Binary' to an 'InputStream'.
+-- | Write an instance of 'Binary' to an 'OutputStream'.
 putToStream :: Binary a => Maybe a -> OutputStream ByteString -> IO ()
 putToStream Nothing  os = Streams.write Nothing os
 putToStream (Just x) os = writeLazyByteString ((runPut . put) x) os
@@ -66,51 +68,64 @@ putToStream (Just x) os = writeLazyByteString ((runPut . put) x) os
 
 --------------------------------------------------------------------------------
 
+-- | Take a 'Get' and an 'InputStream' and decode a
+-- value. Consumes only as much input as necessary to decode the
+-- value. Unconsumed input will be unread. If there is
+-- an error while deserializing, a 'DecodeException' is thrown, and
+-- unconsumed part will be unread. binary decoder use 'Nothing'
+-- to indicate input end, so EOFs/Nothing will close a binary decoder.
+-- Examples:
+--
+-- >>> import qualified System.IO.Streams as Streams
+-- >>> getFromStream (get :: Get String) =<< Streams.fromLazyByteString (Data.ByteString.Lazy.drop 1 $ runPut $ put "encode me")
+-- *** Exception: System.IO.Streams.Binary: binary decode exception: offset 16, "not enough bytes"
+--
 getFromStream :: Get a -> InputStream ByteString -> IO (Maybe a)
 getFromStream g is = do
     let decoder = runGetIncremental g
     Streams.read is >>= maybe (return Nothing)
         (\s -> if S.null s then go decoder else go $ pushChunk decoder s)
-  where go (Fail _ offset message) = throw $ DecodeException offset message
+  where go (Fail s offset message) = do
+            unless (S.null s) (Streams.unRead s is)
+            throwIO $ DecodeException offset message
         go (Done s _ x) = do
             unless (S.null s) (Streams.unRead s is)
             return (Just x)
-        go  decoder' =
+        go decoder' =
             Streams.read is >>=
                maybe (go $ pushEndOfInput decoder')
                      (\s -> if S.null s then go decoder' else go $ pushChunk decoder' s)
 {-# INLINE getFromStream #-}
 
-
+-- | typeclass version of 'getFromStream'
 decodeFromStream :: Binary a => InputStream ByteString -> IO (Maybe a)
 decodeFromStream = getFromStream get
 {-# INLINE decodeFromStream #-}
 
 --------------------------------------------------------------------------------
 
--- | Transform an 'InputStream' over byte strings to an 'InputStream' yielding
---   values of type a, throwing a 'DecodeException' if the decoding fails.
+-- | Convert a stream of individual encoded 'ByteString's to a stream
+-- of Results. Throws a 'DecodeException' on error.
 getInputStream :: Get a -> InputStream ByteString -> IO (InputStream a)
 getInputStream g = Streams.makeInputStream . getFromStream g
 {-# INLINE getInputStream #-}
 
--- | Transform an 'InputStream' over byte strings to an 'InputStream' yielding
---   values of type a, throwing a 'DecodeException' if the decoding fails.
+-- | typeclass version of 'getInputStream'
 decodeInputStream :: Binary a => InputStream ByteString -> IO (InputStream a)
 decodeInputStream = Streams.makeInputStream . decodeFromStream
+{-# INLINE decodeInputStream #-}
 
 --------------------------------------------------------------------------------
 
--- | Transform an 'OutputStream' accepting byte strings to an 'OutputStream'
---   accepting values of type a.
+-- | create an 'OutputStream' of serializable values from an 'OutputStream'
+-- of bytestrings with a 'Putter'.
 putOutputStream :: (a -> Put) -> OutputStream ByteString -> IO (OutputStream a)
 putOutputStream p os = Streams.makeOutputStream $ \ ma ->
     case ma of Nothing -> Streams.write Nothing os
                Just a -> writeLazyByteString (runPut (p a)) os
 {-# INLINE putOutputStream #-}
 
--- | Transform an 'OutputStream' accepting byte strings to an 'OutputStream'
---   accepting values of type a.
+-- | typeclass version of 'putOutputStream'
 encodeOutputStream :: Binary a => OutputStream ByteString -> IO (OutputStream a)
-encodeOutputStream os = Streams.makeOutputStream (\ ma -> putToStream ma os)
-
+encodeOutputStream = putOutputStream put
+{-# INLINE encodeOutputStream #-}
