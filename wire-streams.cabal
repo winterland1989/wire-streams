@@ -1,7 +1,7 @@
 name:               wire-streams
 version:            0.0.2.0
-synopsis:           Use cereal/binary to encode/decode io-streams.
-description:        Use cereal/binary to encode/decode io-streams.
+synopsis:           Use cereal or binary with io-streams.
+description:        Use cereal or binary with io-streams.
 
 license:            BSD3
 license-file:       LICENSE
@@ -10,7 +10,7 @@ maintainer:         winterland1989@gmail.com
 copyright:          Soostone Inc, Petter Bergman, Winterland
 category:           Data, Parsing, IO-Streams
 build-type:         Simple
-extra-source-files: README.md, CHANGElOG
+extra-source-files: README.md, CHANGELOG
 cabal-version:      >=1.10
 
 library
