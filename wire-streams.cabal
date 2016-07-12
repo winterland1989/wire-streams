@@ -10,7 +10,7 @@ maintainer:         winterland1989@gmail.com
 copyright:          Soostone Inc, Petter Bergman, Winterland
 category:           Data, Parsing, IO-Streams
 build-type:         Simple
-extra-source-files: README.md
+extra-source-files: README.md, CHANGElOG
 cabal-version:      >=1.10
 
 library

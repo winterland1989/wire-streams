@@ -11,6 +11,7 @@ import           Control.Monad.IO.Class
 import           Criterion.Main
 import           Data.Binary              (Binary)
 import           Data.ByteString          (ByteString)
+import qualified Data.ByteString.Lazy     as BL
 import           Data.Conduit
 import qualified Data.Conduit.Binary      as Conduit
 import qualified Data.Conduit.Cereal      as Conduit
@@ -28,7 +29,7 @@ import qualified System.IO.Streams.Cereal as Cereal
 
 main :: IO ()
 main = do
-  let lstring = mconcat $ map (runPutLazy . put) foos
+  let lstring = BL.concat $ map (runPutLazy . put) foos
       foos = map exFoo [0..1000]
       exFoo x = Foo x "oh look, a Foo!"
   defaultMain
