@@ -55,7 +55,7 @@ benchmark bench
                     ,   io-streams
                     ,   bytestring
                     ,   cereal
-                    ,   binary == 0.8.4.2
+                    ,   binary
                     ,   cereal-conduit
                     ,   conduit
                     ,   conduit-extra
