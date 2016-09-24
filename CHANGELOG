@@ -1,3 +1,8 @@
+# v0.1.0.0
+
++ Using binary-parsers package which speeds up binary code, remove cereal support since binary is much faster now.
++ DecodeException now contain unconsumed buffer.
+
 # v0.0.2.0
 
 Add binary support, unify API, optimize cereal's putToStream/putOutputStream, add benchmark.

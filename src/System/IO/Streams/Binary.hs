@@ -33,9 +33,8 @@ module System.IO.Streams.Binary (
 import           Control.Exception            (Exception, throwIO)
 import           Control.Monad                (unless)
 import           Data.Binary                  (Binary, get, put)
-import           Data.Binary.Get              (ByteOffset, Decoder (..), Get,
-                                               pushChunk, pushEndOfInput,
-                                               runGetIncremental)
+import qualified Data.Binary.Parser           as P
+import           Data.Binary.Get              (ByteOffset, Decoder(..), Get)
 import           Data.Binary.Put              (runPut, Put)
 import           Data.ByteString              (ByteString)
 import qualified Data.ByteString              as S
@@ -49,12 +48,12 @@ import           System.IO.Streams.ByteString (writeLazyByteString)
 -- | An Exception raised when binary decoding fails.
 --
 -- it contains offset information where cereal don't.
-data DecodeException = DecodeException ByteOffset String
+data DecodeException = DecodeException ByteString ByteOffset String
   deriving (Typeable)
 
 instance Show DecodeException where
-  show (DecodeException offset message) =
-        "System.IO.Streams.Binary: binary decode exception: offset " ++ show offset ++ ", " ++ show message
+  show (DecodeException buf offset message) =
+        "DecodeException\nbuf:" ++ show buf ++ "\noffset:" ++ show offset ++ "\nmessage:" ++ show message
 
 instance Exception DecodeException
 
@@ -81,20 +80,14 @@ putToStream (Just x) os = writeLazyByteString ((runPut . put) x) os
 -- *** Exception: System.IO.Streams.Binary: binary decode exception: offset 16, "not enough bytes"
 --
 getFromStream :: Get a -> InputStream ByteString -> IO (Maybe a)
-getFromStream g is = do
-    let decoder = runGetIncremental g
-    Streams.read is >>= maybe (return Nothing)
-        (\s -> if S.null s then go decoder else go $ pushChunk decoder s)
+getFromStream g is = Streams.read is >>= maybe (return Nothing) (go . P.parse g)
   where go (Fail s offset message) = do
             unless (S.null s) (Streams.unRead s is)
-            throwIO $ DecodeException offset message
+            throwIO $ DecodeException s offset message
         go (Done s _ x) = do
             unless (S.null s) (Streams.unRead s is)
             return (Just x)
-        go decoder' =
-            Streams.read is >>=
-               maybe (go $ pushEndOfInput decoder')
-                     (\s -> if S.null s then go decoder' else go $ pushChunk decoder' s)
+        go (Partial p) = Streams.read is >>= go .  p
 {-# INLINE getFromStream #-}
 
 -- | typeclass version of 'getFromStream'

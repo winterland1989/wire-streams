@@ -4,60 +4,53 @@ wire-streams
 [![Hackage](https://img.shields.io/hackage/v/wire-streams.svg?style=flat)](http://hackage.haskell.org/package/wire-streams)
 [![Build Status](https://travis-ci.org/winterland1989/wire-streams.svg)](https://travis-ci.org/winterland1989/wire-streams)
 
-One stop solution to serialize/deserialize [io-streams](http://hackage.haskell.org/package/io-streams):
+Serialize/deserialize `ByteString` streams from [io-streams](http://hackage.haskell.org/package/io-streams) using [binary](http://hackage.haskell.org/package/binary) package.
 
-+ `System.IO.Streams.Cereal` use [cereal](http://hackage.haskell.org/package/cereal) to serialize/deserialize, cereal provides sanner default to `Double`(IEEE-754), and `ShortByteString` support.
+From 0.1 cereal is removed because [a binary performance problem](https://github.com/winterland1989/binary-parsers/blob/master/Data/Binary/Parser.hs#L187) is taken care of by [binary-parsers](https://github.com/winterland1989/binary-parsers) package. Now binary is much faster and featureful.
 
-+  `System.IO.Streams.Binary` use [binary](http://hackage.haskell.org/package/binary) to serialize/deserialize, binary provide some useful helpers currently not available in cereal(`getLazyByteStringNul`).
-
-This package is rewritten from [cereal-io-streams](https://github.com/Soostone/cereal-io-streams) and [binary-streams](https://github.com/jonpetterbergman/binary-streams) with following changes:
-
-+ Completely rewrite cereal/io-streams adapter.
-+ Clean and unify APIs. 
-+ Add more test and benchmark.
-
-Both cereal and binary are top notch serialize/deserialize libaries, you wouldn't go wrong with either choice. This package mainly serve my purpose to develop native mysql adapter, but also provide a benchmark/comparsion across cereal and binary. here's benchmark result against [cereal-conduit](http://hackage.haskell.org/package/cereal-conduit):
+Benchmark
+---------
 
 ```
 benchmarking decode one element wire-streams/cereal/1000 items
-time                 126.7 ns   (125.1 ns .. 128.2 ns)
+time                 127.6 ns   (126.4 ns .. 129.2 ns)
                      0.999 R²   (0.998 R² .. 0.999 R²)
-mean                 127.4 ns   (126.1 ns .. 128.9 ns)
-std dev              4.887 ns   (4.122 ns .. 6.214 ns)
-variance introduced by outliers: 58% (severely inflated)
+mean                 128.1 ns   (126.6 ns .. 130.1 ns)
+std dev              6.019 ns   (4.441 ns .. 9.245 ns)
+variance introduced by outliers: 67% (severely inflated)
 
 benchmarking decode one element wire-streams/binary/1000 items
-time                 218.4 ns   (216.8 ns .. 220.0 ns)
-                     0.999 R²   (0.999 R² .. 1.000 R²)
-mean                 217.5 ns   (215.8 ns .. 219.2 ns)
-std dev              5.588 ns   (4.589 ns .. 7.044 ns)
-variance introduced by outliers: 37% (moderately inflated)
+time                 90.49 ns   (89.77 ns .. 91.11 ns)
+                     0.999 R²   (0.999 R² .. 0.999 R²)
+mean                 90.42 ns   (89.44 ns .. 91.41 ns)
+std dev              3.371 ns   (2.711 ns .. 4.433 ns)
+variance introduced by outliers: 57% (severely inflated)
 
 benchmarking decode one element cereal-conduit/1000 items
-time                 318.5 ns   (314.7 ns .. 322.1 ns)
-                     0.999 R²   (0.999 R² .. 0.999 R²)
-mean                 319.2 ns   (316.1 ns .. 322.7 ns)
-std dev              11.37 ns   (8.824 ns .. 15.09 ns)
-variance introduced by outliers: 53% (severely inflated)
+time                 345.2 ns   (325.0 ns .. 382.3 ns)
+                     0.953 R²   (0.896 R² .. 0.999 R²)
+mean                 338.6 ns   (329.5 ns .. 379.4 ns)
+std dev              52.15 ns   (14.85 ns .. 114.3 ns)
+variance introduced by outliers: 95% (severely inflated)
 
 benchmarking decode 1000 elements from wire-streams/cereal/1000 items
-time                 99.61 μs   (98.56 μs .. 100.9 μs)
-                     0.997 R²   (0.994 R² .. 0.999 R²)
-mean                 100.4 μs   (98.83 μs .. 102.5 μs)
-std dev              6.321 μs   (4.136 μs .. 9.830 μs)
-variance introduced by outliers: 64% (severely inflated)
+time                 97.24 μs   (95.95 μs .. 98.57 μs)
+                     0.999 R²   (0.998 R² .. 0.999 R²)
+mean                 97.75 μs   (96.78 μs .. 98.68 μs)
+std dev              3.170 μs   (2.640 μs .. 3.906 μs)
+variance introduced by outliers: 31% (moderately inflated)
 
 benchmarking decode 1000 elements from wire-streams/binary/1000 items
-time                 189.3 μs   (187.0 μs .. 191.5 μs)
+time                 65.24 μs   (64.69 μs .. 65.94 μs)
                      0.999 R²   (0.998 R² .. 0.999 R²)
-mean                 189.3 μs   (187.5 μs .. 190.9 μs)
-std dev              5.868 μs   (4.966 μs .. 7.174 μs)
-variance introduced by outliers: 27% (moderately inflated)
+mean                 66.09 μs   (65.35 μs .. 67.62 μs)
+std dev              3.601 μs   (2.014 μs .. 6.391 μs)
+variance introduced by outliers: 58% (severely inflated)
 
 benchmarking decode 1000 elements cereal-conduit/1000 items
-time                 203.3 μs   (201.1 μs .. 205.7 μs)
-                     0.998 R²   (0.996 R² .. 0.999 R²)
-mean                 204.0 μs   (201.3 μs .. 207.9 μs)
-std dev              10.38 μs   (7.759 μs .. 14.73 μs)
-variance introduced by outliers: 49% (moderately inflated)
+time                 198.4 μs   (195.4 μs .. 201.3 μs)
+                     0.998 R²   (0.997 R² .. 0.999 R²)
+mean                 200.4 μs   (197.9 μs .. 203.7 μs)
+std dev              9.718 μs   (7.707 μs .. 12.77 μs)
+variance introduced by outliers: 47% (moderately inflated)
 ```
