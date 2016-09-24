@@ -6,7 +6,7 @@ wire-streams
 
 Serialize/deserialize `ByteString` streams from [io-streams](http://hackage.haskell.org/package/io-streams) using [binary](http://hackage.haskell.org/package/binary) package.
 
-From 0.1 cereal is removed because [a binary performance problem](https://github.com/winterland1989/binary-parsers/blob/master/Data/Binary/Parser.hs#L187) is taken care of by [binary-parsers](https://github.com/winterland1989/binary-parsers) package. Now binary is much faster and featureful.
+From v0.1 cereal is removed because [a binary performance problem](https://github.com/winterland1989/binary-parsers/blob/master/Data/Binary/Parser.hs#L187) is taken care of by [binary-parsers](https://github.com/winterland1989/binary-parsers) package, now binary is much faster and more featureful.
 
 Benchmark
 ---------
