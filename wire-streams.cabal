@@ -12,6 +12,7 @@ category:           Data, Parsing, IO-Streams
 build-type:         Simple
 extra-source-files: README.md, CHANGELOG
 cabal-version:      >=1.10
+homepage:           https://github.com/winterland1989/wire-streams
 
 source-repository head
   type:     git
