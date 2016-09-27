@@ -1,7 +1,7 @@
 name:               wire-streams
 version:            0.1.1.0
-synopsis:           Use cereal or binary with io-streams.
-description:        Use cereal or binary with io-streams.
+synopsis:           Fast binary io-streams adapter.
+description:        Fast binary io-streams adapter.
 
 license:            BSD3
 license-file:       LICENSE

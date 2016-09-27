@@ -1,3 +1,7 @@
+# v0.1.1.0
+
+Move tests to tasty.
+
 # v0.1.0.0
 
 + Using binary-parsers package which speeds up binary code, remove cereal support since binary is much faster now.
