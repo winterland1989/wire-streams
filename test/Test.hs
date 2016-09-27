@@ -1,24 +1,19 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-module EncodeDecodeBinary ( tests ) where
+module Main ( main ) where
 
-import           Control.Exception                         (catch,evaluate)
-import           Data.Binary                               (Binary)
-import           Data.ByteString                           (ByteString)
-import qualified Data.ByteString                           as S
-import           Distribution.TestSuite                    (Test)
-import           Distribution.TestSuite.QuickCheck         (testProperty)
-import           System.IO.Streams                         (write)
-import           System.IO.Streams.Binary                  (decodeInputStream,
-                                                            encodeOutputStream,
-                                                            DecodeException)
-import           System.IO.Streams.List                    (outputToList,
-                                                            fromList,
-                                                            toList,
-                                                            writeList)
-import           Test.QuickCheck.Property                  (Property)
-import           Test.QuickCheck.Monadic                   (monadicIO,
-                                                            assert,
-                                                            run)
+import           Control.Exception        (catch, evaluate)
+import           Data.Binary              (Binary)
+import           Data.ByteString          (ByteString)
+import qualified Data.ByteString          as S
+import           System.IO.Streams        (write)
+import           System.IO.Streams.Binary (DecodeException, decodeInputStream,
+                                           encodeOutputStream)
+import           System.IO.Streams.List   (fromList, outputToList, toList,
+                                           writeList)
+import           Test.QuickCheck.Monadic  (assert, monadicIO, run)
+import           Test.QuickCheck.Property (Property)
+import           Test.Tasty               (defaultMain, testGroup)
+import           Test.Tasty.QuickCheck    (testProperty)
 
 
 -- Using binary-streams, decode from a list of bytestrings
@@ -59,9 +54,9 @@ encodeDecodeError xs = monadicIO $ do
            evaluate xs'
            fail "decoding succeeded when it should fail"
 
-tests :: IO [Test]
-tests =
- return [testProperty "encode-decode-equality Int"
+main :: IO ()
+main = defaultMain $ testGroup "tests" [
+         testProperty "encode-decode-equality Int"
          (encodeDecodeEq :: [Int] -> Property),
          testProperty "encode-decode-equality String"
          (encodeDecodeEq :: [String] -> Property),
